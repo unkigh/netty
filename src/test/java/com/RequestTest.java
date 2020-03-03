@@ -1,5 +1,6 @@
 package com;
 
+import com.zyj.netty.server.CustomHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -12,6 +13,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import lombok.extern.slf4j.Slf4j;
@@ -32,24 +34,26 @@ public class RequestTest {
     public void testTo(){
         EventLoopGroup group = new NioEventLoopGroup();
 
-            Bootstrap b = new Bootstrap();
-            b.group(group)
-                    .channel(NioSocketChannel.class)
-                    .option(ChannelOption.TCP_NODELAY, true)
-                    .handler(new ChannelInitializer<SocketChannel>(){
-                        @Override
-                        public void initChannel(SocketChannel ch) throws Exception {
-                            ChannelPipeline p = ch.pipeline();
-                            p.addLast("httpCode", new HttpClientCodec());
-                        }
-                    });
+        Bootstrap b = new Bootstrap();
+        b.group(group)
+                .channel(NioSocketChannel.class)
+                .option(ChannelOption.TCP_NODELAY, true)
+                .handler(new ChannelInitializer<SocketChannel>(){
+                    @Override
+                    public void initChannel(SocketChannel ch) throws Exception {
+                        ChannelPipeline p = ch.pipeline();
+                        p.addLast("httpCode", new HttpClientCodec())
+                                .addLast("aggregator", new HttpObjectAggregator(1024 * 1024)); //相当于1M;
+                    }
+                });
         try {
             ChannelFuture future = b.connect(host, port).sync();
-            future.channel().writeAndFlush("Hello Netty Server, I am a common client");
+            future.channel().writeAndFlush("Hello Netty Server");
             future.channel().closeFuture().sync();
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new IllegalStateException(e.getMessage(), e);
         }finally {
+            //关闭退出
             group.shutdownGracefully();
         }
     }

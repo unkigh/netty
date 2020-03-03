@@ -7,6 +7,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -16,6 +18,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
@@ -39,9 +42,29 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 //        if(http instanceof )
 //    } //FullHttpRequest
 
+    public static Map userMap = new HashMap<>();
+    //记录和管理所有的channel
+    private static ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+
     private String type = "text/plain";
     private int dataLen = 0;
     private byte[] act,plVsn,token,random,checkValue;
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        log.info("接受到一个客户端的链接, channel：" + ctx.channel().id().asShortText());
+        channels.add(ctx.channel());
+        userMap.put(ctx.channel().id().asShortText(), ctx.channel());
+//        super.handlerAdded(ctx);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        log.info("客户端断开链接，re channel：" + ctx.channel().id().asShortText());
+//        channels.remove(ctx.channel());
+//        channels
+//        super.handlerRemoved(ctx);
+    }
 
     @Override
     protected void messageReceived(ChannelHandlerContext context, FullHttpRequest request) throws Exception {
